@@ -1,53 +1,85 @@
 <script setup>
-import { uid } from "uid";
-import { ref } from "vue";
 import { Icon } from "@iconify/vue";
-import TodoHeadeader from "../components/TodoHeader.vue";
-import TodoButton from "../components/TodoButton.vue";
-import TodoItem from "../components/TodoItem.vue";
+import { uid } from "uid";
+import { ref, computed } from "vue";
 import TodoCreator from "../components/TodoCreator.vue";
+import TodoItem from "../components/TodoItem.vue";
+
 const todoList = ref([]);
+
+const todosCompleted = computed(() => {
+  return todoList.value.every((todo) => todo.isCompleted);
+});
+
+const fetchTodoList = () => {
+  const savedTodoList = JSON.parse(localStorage.getItem("todoList"));
+  if (savedTodoList) {
+    todoList.value = savedTodoList;
+  }
+};
+
+// Fetch Todo's on page load
+fetchTodoList();
+
+const setTodoListLocalStorage = () => {
+  localStorage.setItem("todoList", JSON.stringify(todoList.value));
+};
 
 const createTodo = (todo) => {
   todoList.value.push({
     id: uid(),
     todo,
-    isCompleted: null,
+    isCompleted: false,
     isEditing: null,
   });
-};
-
-const toggleTodoComplete = (todoPos) => {
-  todoList.value[todoPos].isCompleted = !todoList.value[todoPos].isCompleted
+  setTodoListLocalStorage();
 };
 
 const toggleEditTodo = (todoPos) => {
-  todoList.value[todoPos].isEditing = !todoList.value[todoPos].isEditing
+  todoList.value[todoPos].isEditing = !todoList.value[todoPos].isEditing;
+  setTodoListLocalStorage();
 };
 
 const updateTodo = (todoVal, todoPos) => {
   todoList.value[todoPos].todo = todoVal;
+  setTodoListLocalStorage();
+};
 
+const toggleTodoComplete = (todoPos) => {
+  todoList.value[todoPos].isCompleted = !todoList.value[todoPos].isCompleted;
+  setTodoListLocalStorage();
+};
+
+const deleteTodo = (todo) => {
+  todoList.value = todoList.value.filter(
+    (todoFilter) => todoFilter.id !== todo.id
+  );
+  setTodoListLocalStorage();
 };
 </script>
 
 <template>
   <main>
-    <TodoHeadeader />
     <h1>Create Todo</h1>
-    <TodoCreator @create-todo="createTodo" />
+    <TodoCreator @create-todo="createTodo">
+      <template #button-content>Create</template>
+    </TodoCreator>
     <ul class="todo-list" v-if="todoList.length > 0">
-      <TodoItem v-for="(todo, index) in todoList" :todo="todo" :index="index" @toggle-complete="toggleTodoComplete"
-        @edit-todo="toggleEditTodo" @update-todo="updateTodo" />
+      <TodoItem v-for="(todo, index) in todoList" :todo="todo" :index="index" @edit-todo="toggleEditTodo"
+        @update-todo="updateTodo" @toggle-complete="toggleTodoComplete" @delete-todo="deleteTodo" />
     </ul>
-    <p class="todos-msg" v-else>
-      <Icon icon="noto-v1:sad-but-relieved-face" width="22" />
-      <span>You have no todo;s to complete! Add one!</span>
+    <p v-else class="todos-msg">
+      <Icon icon="noto-v1:sad-but-relieved-face" />
+      <span>You have no todo's to complete! Add one!</span>
+    </p>
+    <p v-if="todosCompleted && todoList.length > 0" class="todos-msg">
+      <Icon icon="noto-v1:party-popper" />
+      <span>You have completed all your todos!</span>
     </p>
   </main>
 </template>
 
-<style  lang="scss" scoped>
+<style scoped lang="scss">
 main {
   display: flex;
   flex-direction: column;
